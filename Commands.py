@@ -1,6 +1,7 @@
 # coding=utf8
 import sys, os, time, math, pprint
 import Irc, Transactions, Blocknotify, Logger, Global, Hooks, Config
+import decimal
 
 commands = {}
 
@@ -35,8 +36,8 @@ def parse_amount(s, acct, all_offset = 0):
 		return max(Transactions.balance(acct) + all_offset, 1)
 	else:
 		try:
-			amount = float(s)
-			if math.isnan(amount):
+			amount = decimal.Decimal(s)
+			if amount.is_nan():
 				raise ValueError
 		except ValueError:
 			raise ValueError(repr(s) + " - invalid amount")

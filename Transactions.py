@@ -1,6 +1,7 @@
 import sys, os, threading, traceback, time
 import dogecoinrpc, dogecoinrpc.connection, psycopg2
 import Config, Logger, Blocknotify
+from decimal import Decimal
 
 def database():
 	return psycopg2.connect(database = Config.config["database"])
@@ -156,8 +157,8 @@ def ping():
 def balances():
 	cur = database().cursor()
 	cur.execute("SELECT SUM(balance) FROM accounts")
-	db = float(cur.fetchone()[0])
-	dogecoind = float(daemon().getbalance(minconf = Config.config["confirmations"]))
+	db = Decimal(cur.fetchone()[0])
+	dogecoind = Decimal(daemon().getbalance(minconf = Config.config["confirmations"]))
 	return (db, dogecoind)
 
 def get_info():

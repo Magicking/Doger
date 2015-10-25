@@ -1,6 +1,7 @@
 import socket, random, threading, Queue, sys, traceback, time, ssl
 from string import maketrans
 import Config, Global, Hooks, Logger
+import decimal
 
 lowercase = "abcdefghijklmnopqrstuvwxyz[]~\\"
 uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ{}^|"
@@ -64,7 +65,7 @@ def account_names(nicks):
 		if not found:
 			queues[i] = Queue.Queue()
 			least = None
-			leastsize = float("inf")
+			leastsize = decimal.Decimal("inf")
 			for instance in Global.instances:
 				size = Global.instances[instance].whois_queue.unfinished_tasks + Global.instances[instance].send_queue.unfinished_tasks
 				if leastsize > size:
