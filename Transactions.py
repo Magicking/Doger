@@ -1,35 +1,32 @@
 import sys, os, threading, traceback, time
-import dogecoinrpc, dogecoinrpc.connection, psycopg2
+import psycopg2
 import Config, Logger, Blocknotify
+from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 from decimal import Decimal
 
 def database():
 	return psycopg2.connect(database = Config.config["database"])
 
-def daemon():
-	return dogecoinrpc.connect_to_local()
+class daemonClass(object):
+	def __init__(self, coinuri = None):
+		self.coinuri = Config.config["coinuri"] if coinuri is None else coinuri
+		self.rpc = AuthServiceProxy(self.coinuri)
+
+	def __call__(self):
+		return self.rpc
 
 cur = database().cursor()
 cur.execute("SELECT block FROM lastblock")
 lastblock = cur.fetchone()[0]
 del cur
+daemon = daemonClass()
 
 class NotEnoughMoney(Exception):
 	pass
-InsufficientFunds = dogecoinrpc.exceptions.InsufficientFunds
+class InsufficientFunds(Exception):
+	pass
 
 unconfirmed = {}
-
-# Monkey-patching dogecoinrpc
-def patchedlistsinceblock(self, block_hash, minconf=1):
-	res = self.proxy.listsinceblock(block_hash, minconf)
-	res['transactions'] = [dogecoinrpc.connection.TransactionInfo(**x) for x in res['transactions']]
-	return res
-try:
-	daemon().listsinceblock("0", 1)
-except TypeError:
-	dogecoinrpc.connection.DogecoinConnection.listsinceblock = patchedlistsinceblock
-# End of monkey-patching
 
 def txlog(cursor, token, amt, tx = None, address = None, src = None, dest = None):
 	cursor.execute("INSERT INTO txlog VALUES (%s, %s, %s, %s, %s, %s, %s)", (time.time(), token, src, dest, amt, tx, address))
@@ -116,9 +113,11 @@ def withdraw(token, account, address, amount):
 	if not cur.rowcount:
 		raise NotEnoughMoney()
 	try:
-		tx = daemon().sendtoaddress(address, amount, comment = "sent with Doger")
-	except InsufficientFunds:
-		raise
+		tx = daemon().sendtoaddress(address, amount, "sent with Doger")
+	except JSONRPCException as e:
+		if e.code != -4:
+			Logger.log("c", "Unknown error with sendtoaddress: %s" % e)
+		raise InsufficientFunds()
 	except:
 		Logger.irclog("Emergency lock on account '%s'" % (account))
 		lock(account, True)
@@ -147,7 +146,7 @@ def deposit_address(account):
 
 def verify_address(address):
 	if address.isalnum():
-		return daemon().validateaddress(address).isvalid
+		return daemon().validateaddress(address)["isvalid"]
 	else:
 		return False
 
@@ -158,7 +157,7 @@ def balances():
 	cur = database().cursor()
 	cur.execute("SELECT SUM(balance) FROM accounts")
 	db = Decimal(cur.fetchone()[0])
-	dogecoind = Decimal(daemon().getbalance(minconf = Config.config["confirmations"]))
+	dogecoind = Decimal(daemon().getbalance('', Config.config["confirmations"]))
 	return (db, dogecoind)
 
 def get_info():
