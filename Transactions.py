@@ -113,7 +113,7 @@ def withdraw(token, account, address, amount):
 	if not cur.rowcount:
 		raise NotEnoughMoney()
 	try:
-		tx = daemon().sendtoaddress(address, amount, "sent with Doger")
+		tx = daemon().sendtoaddress(address, amount, "sent with %s" % Config.config['account'])
 	except JSONRPCException as e:
 		if e.code != -4:
 			Logger.log("c", "Unknown error with sendtoaddress: %s" % e)
