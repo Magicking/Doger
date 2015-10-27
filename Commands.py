@@ -42,7 +42,7 @@ def parse_amount(s, acct, all_offset = 0):
 			amount = decimal.Decimal(s)
 			if amount.is_nan():
 				raise ValueError
-		except ValueError:
+		except (ValueError, decimal.InvalidOperation):
 			raise ValueError(repr(s) + " - invalid amount")
 		if amount > 1e12:
 			raise ValueError(repr(s) + " - invalid amount (value too large)")
