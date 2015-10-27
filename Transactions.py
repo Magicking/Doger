@@ -36,21 +36,21 @@ def notify_block():
 	lb = daemon().listsinceblock(lastblock, Config.config["confirmations"])
 	db = database()
 	cur = db.cursor()
-	txlist = [(int(tx.amount), tx.address) for tx in lb["transactions"] if tx.category == "receive" and tx.confirmations >= Config.config["confirmations"]]
+	txlist = [(int(tx['amount']), tx['address']) for tx in lb["transactions"] if tx['category'] == "receive" and tx['confirmations'] >= Config.config["confirmations"]]
 	if len(txlist):
 		addrlist = [(tx[1],) for tx in txlist]
 		cur.executemany("UPDATE accounts SET balance = balance + %s FROM address_account WHERE accounts.account = address_account.account AND address_account.address = %s", txlist)
 		cur.executemany("UPDATE address_account SET used = '1' WHERE address = %s", addrlist)
 	unconfirmed = {}
 	for tx in lb["transactions"]:
-		if tx.category == "receive":
-			cur.execute("SELECT account FROM address_account WHERE address = %s", (tx.address,))
+		if tx['category'] == "receive":
+			cur.execute("SELECT account FROM address_account WHERE address = %s", (tx['address'],))
 			if cur.rowcount:
 				account = cur.fetchone()[0]
-				if tx.confirmations < Config.config["confirmations"]:
-						unconfirmed[account] = unconfirmed.get(account, 0) + int(tx.amount)
+				if tx['confirmations'] < Config.config["confirmations"]:
+						unconfirmed[account] = unconfirmed.get(account, 0) + int(tx['amount'])
 				else:
-					txlog(cur, Logger.token(), int(tx.amount), tx = tx.txid.encode("ascii"), address = tx.address, dest = account)
+					txlog(cur, Logger.token(), int(tx['amount']), tx = tx['txid'].encode("ascii"), address = tx['address'], dest = account)
 	cur.execute("UPDATE lastblock SET block = %s", (lb["lastblock"],))
 	db.commit()
 	lastblock = lb["lastblock"]
@@ -162,7 +162,7 @@ def balances():
 
 def get_info():
 	info = daemon().getinfo()
-	return (info, daemon().getblockhash(info.blocks))
+	return (info, daemon().getblockhash(info['blocks']))
 
 def lock(account, state = None):
 	if state == None:

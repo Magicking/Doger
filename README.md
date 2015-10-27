@@ -5,10 +5,10 @@ IRC tip bot in python.
 
 **Requirements:**
 
-- **RPC library** - From [here](https://github.com/jcsaaddupuy/dogecoin-python) or pypi.
-- **Dogecoind** - From [here](https://github.com/dogecoin/dogecoin/), you need the `dogecoind` binary.
+- **python-bitcoinrpc** - From [here](https://github.com/jgarzik/python-bitcoinrpc).
+- **Coin daemon** - From [here](https://github.com/neucoin/neucoin).
 - **Postgres** - From [here](http://www.postgresql.org/), python binding from [here](https://pypi.python.org/pypi/psycopg2)
-- **Python** - Obviously.
+- **Python2** - Obviously.
 
 **Setup:**
 
@@ -48,15 +48,14 @@ config = {
 }
 ```
 
-- Add the following to the dogecoin.conf:
+- Add the following to the XXXcoin.conf:
 
 ```
 rpcthreads=100
 daemon=1
 irc=0
 dnsseed=1
-paytxfee=1.0
-blocknotify=/usr/bin/touch blocknotify/blocknotify
+blocknotify=/usr/bin/touch /PATH/TO/SOURCE/blocknotify/blocknotify
 ```
 
 - Create a postgres database with the following schema:
@@ -76,5 +75,5 @@ ALTER TABLE locked ADD CONSTRAINT locked_pkey PRIMARY KEY (account);
     
 **Running it:**
 
-- Start up the dogecoin daemon (`dogecoind`)
+- Start up the XXXcoin daemon (`XXXcoind`)
 - Launch the bot with `python Main.py`
