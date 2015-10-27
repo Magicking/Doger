@@ -19,11 +19,9 @@ def balance(req, _):
 	confirmed = Transactions.balance(acct)
 	pending = Transactions.balance_unconfirmed(acct)
 	if pending:
-		req.reply("Your balance is %s%i (+%s%i unconfirmed)" % (
-                          coinconfig['unit'], confirmed,
-                          coinconfig['unit'], pending))
+		req.reply(coinconfig["balance_confirm"] % (confirmed, pending))
 	else:
-		req.reply("Your balance is %s%i" % (coinconfig['unit'], confirmed))
+		req.reply(coinconfig["balance"] % confirmed)
 commands["balance"] = balance
 
 def deposit(req, _):
@@ -77,7 +75,7 @@ def withdraw(req, arg):
 		uri = coinconfig['explorertx'] % tx
 		req.reply("Coins have been sent, see %s [%s]" % (uri, token))
 	except Transactions.NotEnoughMoney:
-		req.reply_private("You tried to withdraw %s%i (+%s1 TX fee) but you only have %s%i" % (coinconfig['unit'], amount, coinconfig['unit'], coinconfig['unit'], Transactions.balance(acct)))
+		req.reply_private(coinconfig["notenoughmoney"] % (amount, Transactions.balance(acct)))
 	except Transactions.InsufficientFunds:
 		req.reply("Something went wrong, report this to mniip [%s]" % (token))
 		Logger.irclog("InsufficientFunds while executing '%s' from '%s'" % (req.text, req.nick))
@@ -203,7 +201,7 @@ def donate(req, arg):
 	token = Logger.token()
 	try:
 		Transactions.tip(token, acct, toacct, amount)
-		req.reply("Donated %s%i, thank you very much for your donation [%s]" % (coinconfig["unit"], amount, token))
+		req.reply(coinconfig["donated"] % (amount, token))
 	except Transactions.NotEnoughMoney:
 		req.reply_private(coinconfig["tiptry"] % (amount, Transactions.balance(acct)))
 commands["donate"] = donate
