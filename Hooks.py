@@ -137,6 +137,10 @@ def message(instance, source, target, text):
 						req = Request(instance, reply, source, commandline)
 						t = threading.Thread(target = run_command, args = (cmd, req, args))
 						t.start()
+		if Global.account_cache.get(target, None) != None:
+			nick = Irc.get_nickname(source)
+			if Global.account_cache[target].get(nick, None) != None:
+				Global.account_cache[target][nick]['last_msg'] = time.time()
 hooks["PRIVMSG"] = message
 
 def join(instance, source, channel, account, _):
@@ -146,7 +150,7 @@ def join(instance, source, channel, account, _):
 	with Global.account_lock:
 		if nick  == instance:
 			Global.account_cache[channel] = {}
-		Global.account_cache[channel][nick] = account
+		Global.account_cache[channel][nick] = {"account": account, "last_msg": 0}
 		for channel in Global.account_cache:
 			if nick in Global.account_cache[channel]:
 				Global.account_cache[channel][nick] = account
@@ -201,7 +205,7 @@ def account(instance, source, account):
 	with Global.account_lock:
 		for channel in Global.account_cache:
 			if nick in Global.account_cache[channel]:
-				Global.account_cache[channel][nick] = account
+				Global.account_cache[channel][nick] = {"account": account, "last_msg": 0}
 				Logger.log("w", "Propagating %s=%s into %s" % (nick, account, channel))
 hooks["ACCOUNT"] = account
 
