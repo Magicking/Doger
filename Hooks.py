@@ -153,7 +153,7 @@ def join(instance, source, channel, account, _):
 		Global.account_cache[channel][nick] = {"account": account, "last_msg": 0}
 		for channel in Global.account_cache:
 			if nick in Global.account_cache[channel]:
-				Global.account_cache[channel][nick] = account
+				Global.account_cache[channel][nick] = {"account": account, "last_msg": 0}
 				Logger.log("w", "Propagating %s=%s into %s" % (nick, account, channel))
 hooks["JOIN"] = join
 
