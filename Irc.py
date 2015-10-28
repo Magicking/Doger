@@ -55,7 +55,7 @@ def account_names(nicks):
 			for channel in Global.account_cache:
 				for nick in Global.account_cache[channel]:
 					if Global.account_cache[channel][nick] != None and equal_nicks(nick, nicks[i]):
-						results[i] = Global.account_cache[channel][nick]
+						results[i] = Global.account_cache[channel][nick]["account"]
 						Logger.log("w", "Found %s in cache for %s : %s=%s" % (nicks[i], channel, nick, repr(results[i])))
 						found = True
 						break
@@ -81,7 +81,7 @@ def account_names(nicks):
 				for channel in Global.account_cache:
 					for nick in Global.account_cache[channel]:
 						if equal_nicks(nick, nicks[i]):
-							Global.account_cache[channel][nick] = account
+							Global.account_cache[channel][nick] = {"account": account, "last_msg": 0}
 							Logger.log("w", "Propagating %s=%s into %s" % (nicks[i], repr(account), channel))
 			results[i] = account
 	Logger.log("w", "Solution: " + " ".join([repr(x) for x in results]))
