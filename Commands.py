@@ -182,6 +182,58 @@ def mtip(req, arg):
 	req.reply(output)
 commands["mtip"] = mtip
 
+def rain(req, arg):
+	"""%rain <amount> [minutes=60] - Sends 'amount' coins to the specified channel. 'amount' will be equally distributed among users who has spoke in the last 'minutes'"""
+	if len(arg) < 1:
+		return req.reply(gethelp("rain"))
+	active_delta = Config.config.get("active_time", 60) * 60
+	if len(arg) > 1:
+		try:
+			active_delta = int(arg[1]) * 60
+			if active_delta <= 0:
+				raise ValueError(repr(active_delta) + " - invalid minutes (should be 1 or more)")
+		except ValueError as e:
+			return req.reply_private(str(e))
+	acct = Irc.account_names([req.nick])[0]
+	if not acct:
+		return req.reply_private("You are not identified with freenode services (see /msg NickServ help)")
+	if Transactions.lock(acct):
+		return req.reply_private("Your account is currently locked")
+	try:
+		amount = parse_amount(arg[0], acct)
+	except ValueError as e:
+		return req.reply_private(str(e))
+	token = Logger.token()
+	active_users = []
+	with Global.account_lock:
+		if Global.account_cache.get(req.target, None) != None:
+			t = time.time() - active_delta
+			for user in Global.account_cache[req.target]:
+				totip = Global.account_cache[req.target][user]
+				if totip != None and totip['account'] != acct  and totip["last_msg"] > t:
+					active_users.append((totip["account"], user))
+		else:
+			return req.reply_private("rain command must be used in a channel")
+	if len(active_users) == 0:
+		return req.reply_private("Oh no ! You are all alone !")
+	balance = Transactions.balance(acct)
+	if amount > balance:
+		return req.reply_private("You tried to tip Ɖ%i but you only have Ɖ%i" % (amount, balance))
+	amount_per_user = amount / len(active_users)
+	amount -= amount_per_user * len(active_users)
+	totip = {}
+	for account, _ in active_users:
+		totip[account] = totip.get(account, 0) + amount_per_user
+	tipped = ""
+	try:
+		Transactions.tip_multiple(token, acct, totip)
+		tipped += " [%s]" % (token)
+	except Transactions.NotEnoughMoney:
+		return req.reply_private("You tried to tip Ɖ%i but you only have Ɖ%i" % (total, Transactions.balance(acct)))
+	nicknames = [x for _, x in active_users]
+	req.say("It's raining on %s for Ɖ%d each (to claim /msg neutipbot help) [%s]" % (" ".join(nicknames), amount_per_user, token))
+commands["rain"] = rain
+
 def donate(req, arg):
 	"""%donate <amount> - Donate 'amount' coins to help fund the server Doger is running on"""
 	if len(arg) < 1:
