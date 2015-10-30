@@ -137,10 +137,12 @@ def message(instance, source, target, text):
 						req = Request(instance, reply, source, commandline)
 						t = threading.Thread(target = run_command, args = (cmd, req, args))
 						t.start()
-		if Global.account_cache.get(target, None) != None:
-			nick = Irc.get_nickname(source)
-			if Global.account_cache[target].get(nick, None) != None:
-				Global.account_cache[target][nick]['last_msg'] = time.time()
+		if not Irc.is_ignored(host):
+			with Global.account_lock:
+				if Global.account_cache.get(target, None) != None:
+					nick = Irc.get_nickname(source)
+					if Global.account_cache[target].get(nick, None) != None:
+						Global.account_cache[target][nick]['last_msg'] = time.time()
 hooks["PRIVMSG"] = message
 
 def join(instance, source, channel, account, _):
