@@ -13,7 +13,7 @@ def get_nickname(hostmask):
 	return hostmask.split("!", 1)[0]
 
 def strip_nickname(name):
-	return name.lstrip("+@")
+	return name.lstrip("+%@~")
 
 def get_host(hostmask):
 	return hostmask.split("@", 1)[1]
