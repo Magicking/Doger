@@ -212,7 +212,11 @@ def rain(req, arg):
 			t = time.time() - active_delta
 			for user in Global.account_cache[req.target]:
 				totip = Global.account_cache[req.target][user]
-				if totip != None and totip['account'] != acct  and totip["last_msg"] > t:
+				if (totip != None and
+					totip['account'] != acct and
+					totip["account"] != False and
+					totip["account"] != Config.config["account"] and
+					totip["last_msg"] > t):
 					active_users.append((totip["account"], user))
 		else:
 			return req.reply_private("rain command must be used in a channel")
