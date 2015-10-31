@@ -340,6 +340,22 @@ def admin(req, arg):
 		elif command == "part":
 			Irc.instance_send(req.instance, ("PART", arg[0]), priority = 0.1)
 		elif command == "caches":
+			if len(arg) > 0 and arg[0] == "generate":
+				arg = arg[1:]
+				whois_list = []
+				with Global.account_lock:
+					if arg[0] == "*":
+						for channel in Global.account_cache:
+							for nick in Global.account_cache[channel]:
+								whois_list.append(nick)
+					else:
+						for item in arg:
+							if item[0] == "#" and item in Global.account_cache:
+								for nick in Global.account_cache[item]:
+									whois_list.append(nick)
+							else:
+								whois_list.append(item)
+				Irc.account_names(whois_list)
 			acsize = 0
 			accached = 0
 			with Global.account_lock:
