@@ -285,7 +285,7 @@ def admin(req, arg):
 				arg = arg[1:]
 				whois_list = []
 				with Global.account_lock:
-					if arg[0] == "*":
+					if len(arg) == 0 or arg[0] == "*":
 						for channel in Global.account_cache:
 							for nick in Global.account_cache[channel]:
 								whois_list.append(nick)
