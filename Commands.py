@@ -188,14 +188,17 @@ def rain(req, arg):
 	"""%rain <amount> [minutes=60] - Sends 'amount' coins to the specified channel. 'amount' will be equally distributed among users who has spoke in the last 'minutes'"""
 	if len(arg) < 1:
 		return req.reply(gethelp("rain"))
-	active_delta = Config.config.get("active_time", 60) * 60
-	if len(arg) > 1:
-		try:
-			active_delta = int(arg[1]) * 60
-			if active_delta <= 0:
-				raise ValueError(repr(active_delta) + " - invalid minutes (should be 1 or more)")
-		except ValueError as e:
-			return req.reply_private(str(e))
+	t = -1
+	try:
+		active_delta = int(arg[1]) if len(arg) > 1 else Config.config.get("active_time", 60)
+		if active_delta == -1: # pass -1 to include non active account on channel"
+			pass
+		elif active_delta <= 0:
+			raise ValueError(repr(active_delta) + " - invalid minutes (should be 1 or more)")
+		else:
+			t = time.time() - active_delta * 60
+	except ValueError as e:
+		return req.reply_private(str(e))
 	acct = Irc.account_names([req.nick])[0]
 	if not acct:
 		return req.reply_private("You are not identified with freenode services (see /msg NickServ help)")
@@ -209,7 +212,6 @@ def rain(req, arg):
 	active_users = []
 	with Global.account_lock:
 		if Global.account_cache.get(req.target, None) != None:
-			t = time.time() - active_delta
 			for user in Global.account_cache[req.target]:
 				totip = Global.account_cache[req.target][user]
 				if (totip != None and
