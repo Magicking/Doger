@@ -182,7 +182,7 @@ def mtip(req, arg):
 commands["mtip"] = mtip
 
 def rain(req, arg):
-	"""%rain <amount> [minutes=60] - Sends 'amount' coins to the specified channel. 'amount' will be equally distributed among users who has spoke in the last 'minutes'"""
+	"""%rain <amount> [minutes=60] - Sends 'amount' coins to the specified channel. 'amount' will be equally distributed among users who has spoke in the last 'minutes', -1 for inactives users"""
 	if len(arg) < 1:
 		return req.reply(gethelp("rain"))
 	t = -1
