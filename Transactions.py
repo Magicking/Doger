@@ -25,6 +25,8 @@ class NotEnoughMoney(Exception):
 	pass
 class InsufficientFunds(Exception):
 	pass
+class NotEnoughGiftCard(Exception):
+	pass
 
 unconfirmed = {}
 
@@ -65,6 +67,45 @@ def balance(account):
 
 def balance_unconfirmed(account):
 	return unconfirmed.get(account, 0)
+
+def add_gift(code, price, card_price, target):
+	db = database()
+	cur = db.cursor()
+	cur.execute("INSERT INTO giftcard_account VALUES (%s, 'amazon', %s, %s, %s, '0')", (code, price, card_price, target))
+	db.commit()
+	return cur.rowcount
+
+def giftcard(token, source, number, price, card_price):
+	db = database()
+	cur = db.cursor()
+	cur.execute("SELECT * FROM giftcard_account WHERE price = %s AND card_price = %s AND used = '0' FOR UPDATE LIMIT %s", (price, card_price, number))
+	if cur.rowcount != number:
+		raise NotEnoughGiftCard()
+	gift_cards = cur.fetchall()
+	cur.execute("SELECT * FROM accounts WHERE account = %s FOR UPDATE", (source,))
+	try:
+		cur.execute("UPDATE accounts SET balance = balance - %s WHERE account = %s", (number * price, source))
+	except psycopg2.IntegrityError as e:
+		raise NotEnoughMoney()
+	if not cur.rowcount:
+		raise NotEnoughMoney()
+	accts = {}
+	cards_ret = []
+	for giftcard in gift_cards:
+		cur.execute("UPDATE giftcard_account SET used = '1' WHERE code = %s", (giftcard[0],))
+		if giftcard[4] in accts:
+			accts[giftcard[4]] += 1
+		else:
+			accts[giftcard[4]] = 1
+		cards_ret.append(giftcard[0])
+	cur.execute("SELECT * FROM accounts WHERE account = ANY(%s) FOR UPDATE", (sorted(accts.keys()),))
+	for account in accts:
+		cur.execute("UPDATE accounts SET balance = balance + %s WHERE account = %s", (accts[account] * price, account))
+		if not cur.rowcount:
+			cur.execute("INSERT INTO accounts VALUES (%s, %s)", (accts[account] * price, amount))
+		txlog(cur, token, accts[account]*price, src=source, dest='+%s' % account)
+	db.commit()
+	return cards_ret
 
 def tip(token, source, target, amount): 
 	db = database()

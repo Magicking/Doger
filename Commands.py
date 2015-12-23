@@ -32,7 +32,7 @@ def deposit(req, _):
 	req.reply_private("To deposit, send coins to %s (transactions will be credited after %d confirmations)" % (Transactions.deposit_address(acct), Config.config["confirmations"]))
 commands["deposit"] = deposit
 
-def parse_amount(s, acct, all_offset = 0):
+def parse_amount(s, acct, all_offset = 0, out_type = int):
 	if s.lower() == "all":
 		return max(Transactions.balance(acct) + all_offset, 1)
 	else:
@@ -46,9 +46,65 @@ def parse_amount(s, acct, all_offset = 0):
 			raise ValueError(repr(s) + " - invalid amount (value too large)")
 		if amount <= 0:
 			raise ValueError(repr(s) + " - invalid amount (should be 1 or more)")
-		if not int(amount) == amount:
-			raise ValueError(repr(s) + " - invalid amount (should be integer)")
-		return int(amount)
+		if not out_type(amount) == amount:
+			raise ValueError(repr(s) + " - invalid amount (should be %s)" % out_type.__name__)
+		return out_type(amount)
+
+def giftcard(req, arg):
+	"""%giftcard [number] [price] [card_price] - Give you 'number' Amazon Gift Card of $[card_price] for [price] NEU. If no number specified, number equal 1, if no card_price specified, card_price equal $0.50"""
+	if len(arg) > 3:
+		return req.reply(gethelp("giftcard"))
+	acct = Irc.account_names([req.nick])[0]
+	if not acct:
+		return req.reply_private("You are not identified with freenode services (see /msg NickServ help)")
+	if Transactions.lock(acct):
+		return req.reply_private("Your account is currently locked")
+	number = Config.config["number"]
+	price = Config.config['price']
+	card_price = parse_amount(Config.config['card_price'], None, 0, decimal.Decimal)
+	if len(arg) >= 1:
+		try:
+			if arg[0] == 'all':
+				return req.reply_private('Not implemented yet.')
+			number = parse_amount(arg[0], acct)
+		except ValueError as e:
+			return req.reply_private(str(e))
+	if len(arg) >= 2:
+		try:
+			if arg[1] == 'all':
+				return req.reply_private('%s - invalid amount (should be integer)' % arg[1])
+			price = parse_amount(arg[1], acct)
+		except ValueError as e:
+			return req.reply_private(str(e))
+	if len(arg) >= 3:
+		try:
+			if arg[2] == 'all':
+				return req.reply_private('%s - invalid amount (should be integer)' % arg[2])
+			card_price_val = parse_amount(arg[2], acct, 0, decimal.Decimal)
+			if card_price_val < card_price:
+				return req.reply_private('Card price below limit of %s' % card_price)
+			card_price = card_price_val
+		except ValueError as e:
+			return req.reply_private(str(e))
+	token = Logger.token()
+	try:
+		gifts_cards = Transactions.giftcard(token, acct, number, price, card_price * 100)
+		req.reply_private('[%s] Neucoin total: %d %s (%s %s), Card total: $%s ($%s)' % (
+		token, price*number, coinconfig['unit'], price, coinconfig['unit'],
+		card_price*number, card_price))
+		txt = ''
+		for code in gifts_cards:
+			txt += 'AMZN: %s, ' % code
+		txt = txt[:-2]
+		req.reply_private(txt)
+	except Transactions.NotEnoughMoney:
+		req.reply_private(coinconfig["notenoughmoney"] % (amount, Transactions.balance(acct)))
+	except Transactions.InsufficientFunds:
+		req.reply_private("Something went wrong, report this to Magicking [%s]" % (token))
+	except Transactions.NotEnoughGiftCard:
+		req.reply_private("There is not enough gift card at that price")
+		Logger.irclog("InsufficientFunds while executing '%s' from '%s'" % (req.text, req.nick))
+commands["giftcard"] = giftcard
 
 def withdraw(req, arg):
 	"""%withdraw <address> [amount] - Sends 'amount' coins to the specified coin address. If no amount specified, sends the whole balance"""
@@ -418,6 +474,11 @@ def admin(req, arg):
 			Transactions.ping()
 			rpctime = time.time() - t
 			req.reply("Ping: %f, DB read: %f, DB write: %f, RPC: %f" % (pingtime, dbreadtime, dbwritetime, rpctime))
+		elif command == "gift":
+			if len(arg) == 4:
+				req.reply(str(Transactions.add_gift(arg[0], arg[1], arg[2], arg[3])))
+
+
 
 commands["admin"] = admin
 
